@@ -12,6 +12,8 @@ client = Groq(api_key="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"
 
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+processor.save_pretrained("blip_model")
+model.save_pretrained("blip_model")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
