@@ -8,18 +8,16 @@ from PIL import Image
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
-client = Groq(api_key="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")
+client = Groq(api_key="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")
 
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-processor.save_pretrained("blip_model")
-model.save_pretrained("blip_model")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 def generate_text_with_groq(prompt):
     response = client.chat.completions.create(
-        model="mixtral-8x7b-32768",  # You can change this to "llama2-70b-chat" if preferred
+        model="llama3-8b-8192",  # You can change this to "llama2-70b-chat" if preferred
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
