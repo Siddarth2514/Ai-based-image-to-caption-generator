@@ -17,7 +17,7 @@ model.to(device)
 
 def generate_text_with_groq(prompt):
     response = client.chat.completions.create(
-        model="llama3-8b-8192",  # You can change this to "llama2-70b-chat" if preferred
+        model="llama-3.1-8b-instant",  # You can change this to "llama2-70b-chat" if preferred
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
@@ -119,4 +119,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
