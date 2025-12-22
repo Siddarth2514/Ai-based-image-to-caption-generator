@@ -8,7 +8,7 @@ from PIL import Image
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
-client = Groq(api_key="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")
+client = Groq(api_key="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")
 
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -119,5 +119,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
