@@ -13,7 +13,7 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 
 def get_api_key():
     try:
-        return st.secrets["GROQ_API_KEY"]
+        return secrets["GROQ_API_KEY"]
     except:
         return os.getenv("GROQ_API_KEY")
 
@@ -176,3 +176,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
