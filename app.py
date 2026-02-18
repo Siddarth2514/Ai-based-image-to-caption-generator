@@ -1,32 +1,27 @@
 import os
 import streamlit as st
 from groq import Groq
-from itertools import cycle
-from tqdm import tqdm
 from PIL import Image
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
+from dotenv import load_dotenv
 
 # ---------------------------
-# 🔐 SAFE API KEY HANDLING
+# 🔐 LOAD API KEY FROM .env
 # ---------------------------
 
-def get_api_key():
-    try:
-        return st.secrets["GROQ_API_KEY"]
-    except:
-        return os.getenv("GROQ_API_KEY")
+load_dotenv()
 
-api_key = get_api_key()
+api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
-    st.error("🚨 GROQ API KEY NOT FOUND. Please set GROQ_API_KEY.")
+    st.error("🚨 GROQ_API_KEY not found in .env file")
     st.stop()
 
 client = Groq(api_key=api_key)
 
 # ---------------------------
-# 🚀 CACHE MODEL (IMPORTANT)
+# 🚀 CACHE MODEL
 # ---------------------------
 
 @st.cache_resource
@@ -38,10 +33,11 @@ def load_model():
         "Salesforce/blip-image-captioning-base"
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")  # Force CPU for hosting safety
     model.to(device)
 
     return processor, model, device
+
 
 processor, model, device = load_model()
 
@@ -60,6 +56,7 @@ def generate_text_with_groq(prompt):
     )
     return response.choices[0].message.content.strip()
 
+
 # ---------------------------
 # ✨ CAPTION + HASHTAG
 # ---------------------------
@@ -68,9 +65,11 @@ def caption_generator(description):
     prompt = f"Generate 3 creative Instagram captions for: {description}"
     return generate_text_with_groq(prompt)
 
+
 def hashtag_generator(description):
     prompt = f"Generate 10 trending Instagram hashtags for: {description}"
     return generate_text_with_groq(prompt)
+
 
 # ---------------------------
 # 🖼 IMAGE CAPTION MODEL
@@ -100,6 +99,7 @@ def prediction(img_list):
 
     return [caption.strip() for caption in captions]
 
+
 # ---------------------------
 # 🎯 SAMPLE SECTION
 # ---------------------------
@@ -117,7 +117,7 @@ def sample():
     for idx, (name, path) in enumerate(sp_images.items()):
         with cols[idx]:
             st.image(path, width=150)
-            if st.button(f"Generate - {name}", key=idx):
+            if st.button(f"Generate - {name}", key=f"sample_{idx}"):
                 description = prediction([path])[0]
 
                 st.subheader("📄 Description")
@@ -128,6 +128,7 @@ def sample():
 
                 st.subheader("#️⃣ Hashtags")
                 st.write(hashtag_generator(description))
+
 
 # ---------------------------
 # 📤 UPLOAD SECTION
@@ -154,6 +155,7 @@ def upload():
                 st.subheader("#️⃣ Hashtags")
                 st.write(hashtag_generator(description))
 
+
 # ---------------------------
 # 🎨 MAIN UI
 # ---------------------------
@@ -165,6 +167,7 @@ def main():
     )
 
     st.title("📸 AI Caption & Hashtag Generator")
+    st.write("Upload an image and generate captions + hashtags using AI 🚀")
 
     tab1, tab2 = st.tabs(["Upload Image", "Sample Images"])
 
@@ -174,7 +177,6 @@ def main():
     with tab2:
         sample()
 
+
 if __name__ == "__main__":
     main()
-
-
