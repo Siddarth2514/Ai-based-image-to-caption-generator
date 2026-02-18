@@ -1,23 +1,18 @@
-import os
 import streamlit as st
 from groq import Groq
 from PIL import Image
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from dotenv import load_dotenv
 
 # ---------------------------
-# 🔐 LOAD API KEY FROM .env
+# 🔐 LOAD API KEY FROM STREAMLIT SECRETS
 # ---------------------------
 
-load_dotenv()
-
-api_key = os.getenv("GROQ_API_KEY")
-
-if not api_key:
-    st.error("🚨 GROQ_API_KEY not found in .env file")
+if "GROQ_API_KEY" not in st.secrets:
+    st.error("🚨 GROQ_API_KEY not found in Streamlit Secrets.")
     st.stop()
 
+api_key = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=api_key)
 
 # ---------------------------
@@ -33,7 +28,7 @@ def load_model():
         "Salesforce/blip-image-captioning-base"
     )
 
-    device = torch.device("cpu")  # Force CPU for hosting safety
+    device = torch.device("cpu")  # Force CPU
     model.to(device)
 
     return processor, model, device
@@ -46,16 +41,18 @@ processor, model, device = load_model()
 # ---------------------------
 
 def generate_text_with_groq(prompt):
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": "You are a creative social media assistant."},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=200,
-    )
-    return response.choices[0].message.content.strip()
-
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a creative social media assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=200,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"⚠️ Groq Error: {str(e)}"
 
 # ---------------------------
 # ✨ CAPTION + HASHTAG
@@ -65,11 +62,9 @@ def caption_generator(description):
     prompt = f"Generate 3 creative Instagram captions for: {description}"
     return generate_text_with_groq(prompt)
 
-
 def hashtag_generator(description):
     prompt = f"Generate 10 trending Instagram hashtags for: {description}"
     return generate_text_with_groq(prompt)
-
 
 # ---------------------------
 # 🖼 IMAGE CAPTION MODEL
@@ -98,7 +93,6 @@ def prediction(img_list):
     captions = processor.batch_decode(output, skip_special_tokens=True)
 
     return [caption.strip() for caption in captions]
-
 
 # ---------------------------
 # 🎯 SAMPLE SECTION
@@ -129,7 +123,6 @@ def sample():
                 st.subheader("#️⃣ Hashtags")
                 st.write(hashtag_generator(description))
 
-
 # ---------------------------
 # 📤 UPLOAD SECTION
 # ---------------------------
@@ -155,7 +148,6 @@ def upload():
                 st.subheader("#️⃣ Hashtags")
                 st.write(hashtag_generator(description))
 
-
 # ---------------------------
 # 🎨 MAIN UI
 # ---------------------------
@@ -176,7 +168,6 @@ def main():
 
     with tab2:
         sample()
-
 
 if __name__ == "__main__":
     main()
