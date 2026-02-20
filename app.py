@@ -25,7 +25,7 @@ def generate_image_description(image_bytes):
         base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
         response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model="llama-3.3-70b-vision",
             messages=[
                 {
                     "role": "user",
@@ -129,5 +129,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
