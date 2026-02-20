@@ -25,7 +25,7 @@ client = Groq(api_key=GROQ_API_KEY)
 # 🤖 HUGGINGFACE IMAGE CAPTION API
 # ---------------------------
 
-HF_API_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base"
+HF_API_URL = "https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning"
 
 headers = {
     "Authorization": f"Bearer {HF_API_KEY}"
@@ -184,4 +184,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
