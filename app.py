@@ -3,17 +3,20 @@ from groq import Groq
 from PIL import Image
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
+import os
 
 # ---------------------------
 # 🔐 LOAD API KEY FROM STREAMLIT SECRETS
 # ---------------------------
 
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("🚨 GROQ_API_KEY not found in Streamlit Secrets.")
+
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    st.error("🚨 GROQ_API_KEY not set in environment variables.")
     st.stop()
 
-api_key = st.secrets["GROQ_API_KEY"]
-client = Groq(api_key=api_key)
+client = Groq(api_key=api_key
 
 # ---------------------------
 # 🚀 CACHE MODEL
@@ -171,3 +174,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
