@@ -1,76 +1,62 @@
 import streamlit as st
 from groq import Groq
 from PIL import Image
-import requests
 import os
 import base64
 
 # ---------------------------
-# 🔐 LOAD API KEYS
+# 🔐 LOAD API KEY
 # ---------------------------
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
 if not GROQ_API_KEY:
     st.error("🚨 GROQ_API_KEY not set in environment variables.")
     st.stop()
 
-if not HF_API_KEY:
-    st.error("🚨 HUGGINGFACE_API_KEY not set in environment variables.")
-    st.stop()
-
 client = Groq(api_key=GROQ_API_KEY)
 
 # ---------------------------
-# 🤖 HUGGINGFACE IMAGE CAPTION API
+# 👁️ IMAGE DESCRIPTION USING GROQ VISION
 # ---------------------------
-
-HF_API_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large"
-
-headers = {
-    "Authorization": f"Bearer {HF_API_KEY}"
-}
 
 def generate_image_description(image_bytes):
     try:
-        response = requests.post(
-            HF_API_URL,
-            headers={
-                "Authorization": f"Bearer {HF_API_KEY}",
-                "Content-Type": "application/octet-stream"
-            },
-            data=image_bytes,
-            timeout=60
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
+
+        response = client.chat.completions.create(
+            model="llama-3.2-11b-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Describe this image clearly in one sentence."
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=100,
         )
 
-        print("HF STATUS:", response.status_code)
-        print("HF RESPONSE:", response.text[:300])
-
-        if response.status_code == 503:
-            return "⏳ Model loading... try again in 10 seconds"
-
-        if response.status_code != 200:
-            return f"⚠ HF Error {response.status_code}"
-
-        result = response.json()
-
-        if isinstance(result, list):
-            return result[0]["generated_text"]
-
-        if "error" in result:
-            return f"⚠ {result['error']}"
-
-        return "⚠ Unexpected HF response"
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
-        return f"⚠ Request failed: {str(e)}"
+        return f"⚠️ Vision Error: {str(e)}"
+
 
 # ---------------------------
-# 🧠 GROQ TEXT GENERATION
+# 🧠 CAPTION + HASHTAG USING GROQ
 # ---------------------------
 
-def generate_text_with_groq(prompt):
+def generate_text(prompt):
     try:
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -81,53 +67,18 @@ def generate_text_with_groq(prompt):
             max_tokens=200,
         )
         return response.choices[0].message.content.strip()
+
     except Exception as e:
         return f"⚠️ Groq Error: {str(e)}"
 
-# ---------------------------
-# ✨ CAPTION + HASHTAG
-# ---------------------------
 
 def caption_generator(description):
-    prompt = f"Generate 3 creative Instagram captions for: {description}"
-    return generate_text_with_groq(prompt)
+    return generate_text(f"Generate 3 creative Instagram captions for: {description}")
+
 
 def hashtag_generator(description):
-    prompt = f"Generate 10 trending Instagram hashtags for: {description}"
-    return generate_text_with_groq(prompt)
+    return generate_text(f"Generate 10 trending Instagram hashtags for: {description}")
 
-# ---------------------------
-# 🎯 SAMPLE SECTION
-# ---------------------------
-
-def sample():
-    sp_images = {
-        "Beach": "image/beach.png",
-        "Coffee": "image/coffee.png",
-        "Footballer": "image/footballer.png",
-        "Mountain": "image/mountain.jpg"
-    }
-
-    cols = st.columns(4)
-
-    for idx, (name, path) in enumerate(sp_images.items()):
-        with cols[idx]:
-            st.image(path, width=150)
-            if st.button(f"Generate - {name}", key=f"sample_{idx}"):
-
-                with open(path, "rb") as f:
-                    image_bytes = f.read()
-
-                description = generate_image_description(image_bytes)
-
-                st.subheader("📄 Description")
-                st.write(description)
-
-                st.subheader("✨ Captions")
-                st.write(caption_generator(description))
-
-                st.subheader("#️⃣ Hashtags")
-                st.write(hashtag_generator(description))
 
 # ---------------------------
 # 📤 UPLOAD SECTION
@@ -147,7 +98,8 @@ def upload():
 
                 st.image(image, width=250)
 
-                description = generate_image_description(image_bytes)
+                with st.spinner("Analyzing image..."):
+                    description = generate_image_description(image_bytes)
 
                 st.subheader(f"📄 Description for Image {i+1}")
                 st.write(description)
@@ -157,6 +109,7 @@ def upload():
 
                 st.subheader("#️⃣ Hashtags")
                 st.write(hashtag_generator(description))
+
 
 # ---------------------------
 # 🎨 MAIN UI
@@ -171,17 +124,8 @@ def main():
     st.title("📸 AI Caption & Hashtag Generator")
     st.write("Upload an image and generate captions + hashtags using AI 🚀")
 
-    tab1, tab2 = st.tabs(["Upload Image", "Sample Images"])
+    upload()
 
-    with tab1:
-        upload()
-
-    with tab2:
-        sample()
 
 if __name__ == "__main__":
     main()
-
-
-
-
