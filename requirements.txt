@@ -1,13 +1,6 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-
 streamlit
 Pillow
-torch==2.10.0+cpu
-transformers==4.37.2
-tqdm
-groq
 requests
 python-dotenv
+groq
 gunicorn
-
-
