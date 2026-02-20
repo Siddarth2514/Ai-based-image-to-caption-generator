@@ -8,3 +8,4 @@ tqdm
 groq
 requests
 python-dotenv
+gunicorn
