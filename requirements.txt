@@ -3,9 +3,10 @@
 streamlit
 Pillow
 torch==2.10.0+cpu
-transformers
+transformers==4.40.0
 tqdm
 groq
 requests
 python-dotenv
 gunicorn
+
