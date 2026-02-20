@@ -1,38 +1,48 @@
 import streamlit as st
 from groq import Groq
 from PIL import Image
-import torch
-from transformers import BlipProcessor, BlipForConditionalGeneration
+import requests
 import os
 
 # ---------------------------
-# 🔐 LOAD API KEY FROM STREAMLIT SECRETS
+# 🔐 LOAD API KEYS
 # ---------------------------
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
-api_key = os.getenv("GROQ_API_KEY")
-
-if not api_key:
+if not GROQ_API_KEY:
     st.error("🚨 GROQ_API_KEY not set in environment variables.")
     st.stop()
 
-client = Groq(api_key=api_key)
+if not HF_API_KEY:
+    st.error("🚨 HUGGINGFACE_API_KEY not set in environment variables.")
+    st.stop()
+
+client = Groq(api_key=GROQ_API_KEY)
 
 # ---------------------------
-# 🚀 CACHE MODEL
+# 🤖 HUGGINGFACE IMAGE CAPTION API
 # ---------------------------
 
-@st.cache_resource
-def load_model():
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    model = BlipForConditionalGeneration.from_pretrained(
-        "Salesforce/blip-image-captioning-base",
-        torch_dtype=torch.float32
+HF_API_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base"
+
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}"
+}
+
+def generate_image_description(image_bytes):
+    response = requests.post(
+        HF_API_URL,
+        headers=headers,
+        data=image_bytes
     )
-    model.eval()
-    return processor, model
+    result = response.json()
 
-processor, model = load_model()
+    if isinstance(result, list):
+        return result[0]["generated_text"]
+    else:
+        return "Model is loading. Please try again."
 
 # ---------------------------
 # 🧠 GROQ TEXT GENERATION
@@ -65,34 +75,6 @@ def hashtag_generator(description):
     return generate_text_with_groq(prompt)
 
 # ---------------------------
-# 🖼 IMAGE CAPTION MODEL
-# ---------------------------
-
-def prediction(img_list):
-    max_length = 30
-    num_beams = 4
-    gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
-
-    images = []
-
-    for image in img_list:
-        img = Image.open(image)
-
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-
-        st.image(img, width=250)
-        images.append(img)
-
-    pixel_values = processor(images=images, return_tensors="pt").pixel_values
-    pixel_values = pixel_values.to(device)
-
-    output = model.generate(pixel_values, **gen_kwargs)
-    captions = processor.batch_decode(output, skip_special_tokens=True)
-
-    return [caption.strip() for caption in captions]
-
-# ---------------------------
 # 🎯 SAMPLE SECTION
 # ---------------------------
 
@@ -110,7 +92,11 @@ def sample():
         with cols[idx]:
             st.image(path, width=150)
             if st.button(f"Generate - {name}", key=f"sample_{idx}"):
-                description = prediction([path])[0]
+
+                with open(path, "rb") as f:
+                    image_bytes = f.read()
+
+                description = generate_image_description(image_bytes)
 
                 st.subheader("📄 Description")
                 st.write(description)
@@ -134,9 +120,13 @@ def upload():
 
     if images:
         if st.button("Generate"):
-            descriptions = prediction(images)
+            for i, image in enumerate(images):
+                image_bytes = image.getvalue()
 
-            for i, description in enumerate(descriptions):
+                st.image(image, width=250)
+
+                description = generate_image_description(image_bytes)
+
                 st.subheader(f"📄 Description for Image {i+1}")
                 st.write(description)
 
@@ -169,6 +159,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
