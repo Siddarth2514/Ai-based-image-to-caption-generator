@@ -26,7 +26,7 @@ client = Groq(api_key=GROQ_API_KEY)
 # 🤖 HUGGINGFACE IMAGE CAPTION API
 # ---------------------------
 
-HF_API_URL = "https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning"
+HF_API_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large"
 
 headers = {
     "Authorization": f"Bearer {HF_API_KEY}"
@@ -34,23 +34,21 @@ headers = {
 
 def generate_image_description(image_bytes):
     try:
-        # Convert image to base64
-        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-
         response = requests.post(
             HF_API_URL,
             headers={
                 "Authorization": f"Bearer {HF_API_KEY}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/octet-stream"
             },
-            json={
-                "inputs": image_base64
-            },
+            data=image_bytes,
             timeout=60
         )
 
         print("HF STATUS:", response.status_code)
         print("HF RESPONSE:", response.text[:300])
+
+        if response.status_code == 503:
+            return "⏳ Model loading... try again in 10 seconds"
 
         if response.status_code != 200:
             return f"⚠ HF Error {response.status_code}"
@@ -63,7 +61,7 @@ def generate_image_description(image_bytes):
         if "error" in result:
             return f"⚠ {result['error']}"
 
-        return "⚠ Unexpected response"
+        return "⚠ Unexpected HF response"
 
     except Exception as e:
         return f"⚠ Request failed: {str(e)}"
@@ -183,6 +181,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
