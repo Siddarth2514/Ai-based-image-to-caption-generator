@@ -16,7 +16,7 @@ if not api_key:
     st.error("🚨 GROQ_API_KEY not set in environment variables.")
     st.stop()
 
-client = Groq(api_key=api_key
+client = Groq(api_key=api_key)
 
 # ---------------------------
 # 🚀 CACHE MODEL
@@ -174,4 +174,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
