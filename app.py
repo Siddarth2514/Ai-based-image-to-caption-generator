@@ -24,20 +24,15 @@ client = Groq(api_key=api_key)
 
 @st.cache_resource
 def load_model():
-    processor = BlipProcessor.from_pretrained(
-        "Salesforce/blip-image-captioning-base"
-    )
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     model = BlipForConditionalGeneration.from_pretrained(
-        "Salesforce/blip-image-captioning-base"
+        "Salesforce/blip-image-captioning-base",
+        torch_dtype=torch.float32
     )
+    model.eval()
+    return processor, model
 
-    device = torch.device("cpu")  # Force CPU
-    model.to(device)
-
-    return processor, model, device
-
-
-processor, model, device = load_model()
+processor, model = load_model()
 
 # ---------------------------
 # 🧠 GROQ TEXT GENERATION
@@ -174,5 +169,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
