@@ -32,17 +32,42 @@ headers = {
 }
 
 def generate_image_description(image_bytes):
-    response = requests.post(
-        HF_API_URL,
-        headers=headers,
-        data=image_bytes
-    )
-    result = response.json()
+    try:
+        response = requests.post(
+            HF_API_URL,
+            headers={
+                "Authorization": f"Bearer {HF_API_KEY}",
+                "Content-Type": "application/octet-stream"
+            },
+            data=image_bytes,
+            timeout=60
+        )
 
-    if isinstance(result, list):
-        return result[0]["generated_text"]
-    else:
-        return "Model is loading. Please try again."
+        # Print for debugging (visible in Render logs)
+        print("HF Status:", response.status_code)
+        print("HF Response:", response.text[:300])
+
+        if response.status_code == 401:
+            return "❌ Unauthorized - Check HuggingFace API key"
+
+        if response.status_code == 503:
+            return "⏳ Model is loading... Try again in 10 seconds"
+
+        if response.status_code != 200:
+            return f"⚠️ HF Error {response.status_code}"
+
+        result = response.json()
+
+        if isinstance(result, list):
+            return result[0]["generated_text"]
+
+        if isinstance(result, dict) and "error" in result:
+            return f"⚠️ {result['error']}"
+
+        return "⚠️ Unexpected response from HuggingFace"
+
+    except Exception as e:
+        return f"⚠️ Request failed: {str(e)}"
 
 # ---------------------------
 # 🧠 GROQ TEXT GENERATION
@@ -159,3 +184,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
