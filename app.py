@@ -1,62 +1,48 @@
 import streamlit as st
 from groq import Groq
 from PIL import Image
+import torch
 import os
-import base64
+from transformers import BlipProcessor, BlipForConditionalGeneration
 
 # ---------------------------
-# 🔐 LOAD API KEY
+# 🔐 LOAD API KEY FROM STREAMLIT SECRETS
 # ---------------------------
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if not GROQ_API_KEY:
-    st.error("🚨 GROQ_API_KEY not set in environment variables.")
+if "GROQ_API_KEY" not in st.secrets:
+    st.error("🚨 GROQ_API_KEY not found in Streamlit Secrets.")
     st.stop()
 
-client = Groq(api_key=GROQ_API_KEY)
+api_key = st.secrets["GROQ_API_KEY"]
+client = Groq(api_key=api_key)
 
 # ---------------------------
-# 👁️ IMAGE DESCRIPTION USING GROQ VISION
+# 🚀 CACHE MODEL
 # ---------------------------
 
-def generate_image_description(image_bytes):
-    try:
-        base64_image = base64.b64encode(image_bytes).decode("utf-8")
+@st.cache_resource
+def load_model():
+    processor = BlipProcessor.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
+    model = BlipForConditionalGeneration.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
 
-        response = client.chat.completions.create(
-            model="llama-4-scout",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Describe this image clearly in one sentence."
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=100,
-        )
+    device = torch.device("cpu")  # Force CPU
+    model.to(device)
 
-        return response.choices[0].message.content.strip()
+    return processor, model, device
 
-    except Exception as e:
-        return f"⚠️ Vision Error: {str(e)}"
 
+processor, model, device = load_model()
 
 # ---------------------------
-# 🧠 CAPTION + HASHTAG USING GROQ
+# 🧠 GROQ TEXT GENERATION
 # ---------------------------
 
-def generate_text(prompt):
+def generate_text_with_groq(prompt):
     try:
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -67,18 +53,77 @@ def generate_text(prompt):
             max_tokens=200,
         )
         return response.choices[0].message.content.strip()
-
     except Exception as e:
         return f"⚠️ Groq Error: {str(e)}"
 
+# ---------------------------
+# ✨ CAPTION + HASHTAG
+# ---------------------------
 
 def caption_generator(description):
-    return generate_text(f"Generate 3 creative Instagram captions for: {description}")
-
+    prompt = f"Generate 3 creative Instagram captions for: {description}"
+    return generate_text_with_groq(prompt)
 
 def hashtag_generator(description):
-    return generate_text(f"Generate 10 trending Instagram hashtags for: {description}")
+    prompt = f"Generate 10 trending Instagram hashtags for: {description}"
+    return generate_text_with_groq(prompt)
 
+# ---------------------------
+# 🖼 IMAGE CAPTION MODEL
+# ---------------------------
+
+def prediction(img_list):
+    max_length = 30
+    num_beams = 4
+    gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
+
+    images = []
+
+    for image in img_list:
+        img = Image.open(image)
+
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+
+        st.image(img, width=250)
+        images.append(img)
+
+    pixel_values = processor(images=images, return_tensors="pt").pixel_values
+    pixel_values = pixel_values.to(device)
+
+    output = model.generate(pixel_values, **gen_kwargs)
+    captions = processor.batch_decode(output, skip_special_tokens=True)
+
+    return [caption.strip() for caption in captions]
+
+# ---------------------------
+# 🎯 SAMPLE SECTION
+# ---------------------------
+
+def sample():
+    sp_images = {
+        "Beach": "image/beach.png",
+        "Coffee": "image/coffee.png",
+        "Footballer": "image/footballer.png",
+        "Mountain": "image/mountain.jpg"
+    }
+
+    cols = st.columns(4)
+
+    for idx, (name, path) in enumerate(sp_images.items()):
+        with cols[idx]:
+            st.image(path, width=150)
+            if st.button(f"Generate - {name}", key=f"sample_{idx}"):
+                description = prediction([path])[0]
+
+                st.subheader("📄 Description")
+                st.write(description)
+
+                st.subheader("✨ Captions")
+                st.write(caption_generator(description))
+
+                st.subheader("#️⃣ Hashtags")
+                st.write(hashtag_generator(description))
 
 # ---------------------------
 # 📤 UPLOAD SECTION
@@ -93,14 +138,9 @@ def upload():
 
     if images:
         if st.button("Generate"):
-            for i, image in enumerate(images):
-                image_bytes = image.getvalue()
+            descriptions = prediction(images)
 
-                st.image(image, width=250)
-
-                with st.spinner("Analyzing image..."):
-                    description = generate_image_description(image_bytes)
-
+            for i, description in enumerate(descriptions):
                 st.subheader(f"📄 Description for Image {i+1}")
                 st.write(description)
 
@@ -109,7 +149,6 @@ def upload():
 
                 st.subheader("#️⃣ Hashtags")
                 st.write(hashtag_generator(description))
-
 
 # ---------------------------
 # 🎨 MAIN UI
@@ -124,12 +163,13 @@ def main():
     st.title("📸 AI Caption & Hashtag Generator")
     st.write("Upload an image and generate captions + hashtags using AI 🚀")
 
-    upload()
+    tab1, tab2 = st.tabs(["Upload Image", "Sample Images"])
 
+    with tab1:
+        upload()
+
+    with tab2:
+        sample()
 
 if __name__ == "__main__":
     main()
-
-
-
-
