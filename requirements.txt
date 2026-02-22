@@ -1,4 +1,6 @@
 streamlit
 Pillow
+torch==2.2.2
+transformers==4.37.2
 groq
-gunicorn
+tqdm
