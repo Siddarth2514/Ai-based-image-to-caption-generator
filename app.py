@@ -1,24 +1,33 @@
+import os
 import streamlit as st
 from groq import Groq
+from itertools import cycle
+from tqdm import tqdm
 from PIL import Image
 import torch
-import os
 from transformers import BlipProcessor, BlipForConditionalGeneration
+import streamlit.components.v1 as components
 
 # ---------------------------
-# 🔐 LOAD API KEY FROM STREAMLIT SECRETS
+# 🔐 SAFE API KEY HANDLING
 # ---------------------------
 
+def get_api_key():
+    try:
+        return st.secrets["GROQ_API_KEY"]
+    except:
+        return os.getenv("GROQ_API_KEY")
 
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("🚨 GROQ_API_KEY not found in Streamlit Secrets.")
+api_key = get_api_key()
+
+if not api_key:
+    st.error("🚨 GROQ API KEY NOT FOUND. Please set GROQ_API_KEY.")
     st.stop()
 
-api_key = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=api_key)
 
 # ---------------------------
-# 🚀 CACHE MODEL
+# 🚀 CACHE MODEL (IMPORTANT)
 # ---------------------------
 
 @st.cache_resource
@@ -30,11 +39,10 @@ def load_model():
         "Salesforce/blip-image-captioning-base"
     )
 
-    device = torch.device("cpu")  # Force CPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     return processor, model, device
-
 
 processor, model, device = load_model()
 
@@ -43,18 +51,15 @@ processor, model, device = load_model()
 # ---------------------------
 
 def generate_text_with_groq(prompt):
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "You are a creative social media assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=200,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"⚠️ Groq Error: {str(e)}"
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": "You are a creative social media assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=200,
+    )
+    return response.choices[0].message.content.strip()
 
 # ---------------------------
 # ✨ CAPTION + HASHTAG
@@ -113,7 +118,7 @@ def sample():
     for idx, (name, path) in enumerate(sp_images.items()):
         with cols[idx]:
             st.image(path, width=150)
-            if st.button(f"Generate - {name}", key=f"sample_{idx}"):
+            if st.button(f"Generate - {name}", key=idx):
                 description = prediction([path])[0]
 
                 st.subheader("📄 Description")
@@ -161,7 +166,13 @@ def main():
     )
 
     st.title("📸 AI Caption & Hashtag Generator")
-    st.write("Upload an image and generate captions + hashtags using AI 🚀")
+    components.html(
+    """
+    <script src="https://pl28906620.effectivegatecpm.com/ee/67/45/ee674580ebda589a9c059f5e97c7af69.js"></script>
+    """,
+    height=0
+    )
+
 
     tab1, tab2 = st.tabs(["Upload Image", "Sample Images"])
 
@@ -172,4 +183,4 @@ def main():
         sample()
 
 if __name__ == "__main__":
-    main()
+    main()    is it correct
