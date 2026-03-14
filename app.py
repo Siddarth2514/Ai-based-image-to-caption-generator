@@ -166,12 +166,14 @@ def main():
     )
 
     st.title("📸 AI Caption & Hashtag Generator")
-    components.html(
-    """
-    <script src="https://pl28906620.effectivegatecpm.com/ee/67/45/ee674580ebda589a9c059f5e97c7af69.js"></script>
-    """,
-    height=0
-    )
+   components.html("""
+<html>
+    <head>
+        <script src="https://pl28906620.effectivegatecpm.com/ee/67/45/ee674580ebda589a9c059f5e97c7af69.js"></script>
+    </head>
+    <body></body>
+</html>
+    """, height=100)
 
 
     tab1, tab2 = st.tabs(["Upload Image", "Sample Images"])
