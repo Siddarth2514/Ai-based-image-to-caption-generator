@@ -167,14 +167,7 @@ def main():
     )
 
     st.title("📸 AI Caption & Hashtag Generator")
-
-    # Adsterra Banner
-    st.markdown("""
-    <a href="https://beta.publishers.adsterra.com/referral/YH1XCqnnNS" rel="nofollow">
-    <img alt="banner" src="https://landings-cdn.adsterratech.com/referralBanners/png/120%20x%2060%20px.png" />
-    </a>
-    """, unsafe_allow_html=True)
-
+    
     tab1, tab2 = st.tabs(["Upload Image", "Sample Images"])
 
     with tab1:
